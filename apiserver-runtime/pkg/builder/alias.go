@@ -22,8 +22,8 @@ import (
 	pkgserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/kube-openapi/pkg/common"
 
-"github.com/vine-io/kes/apiserver-runtime/internal/sample-apiserver/pkg/cmd/server"
-builderrest "github.com/vine-io/kes/apiserver-runtime/pkg/builder/rest"
+	"github.com/vine-io/kes/apiserver-runtime/internal/sample-apiserver/pkg/cmd/server"
+	builderrest "github.com/vine-io/kes/apiserver-runtime/pkg/builder/rest"
 )
 
 // GenericAPIServer is an alias for pkgserver.GenericAPIServer

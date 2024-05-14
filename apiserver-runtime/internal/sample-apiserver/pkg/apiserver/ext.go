@@ -28,9 +28,10 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	pkgserver "k8s.io/apiserver/pkg/server"
 
-"github.com/vine-io/kes/apiserver-runtime/pkg/builder/resource"
-"github.com/vine-io/kes/apiserver-runtime/pkg/builder/resource/resourcestrategy"
+	"github.com/vine-io/kes/apiserver-runtime/pkg/builder/resource"
+	"github.com/vine-io/kes/apiserver-runtime/pkg/builder/resource/resourcestrategy"
 )
+
 type StorageProvider func(s *runtime.Scheme, g genericregistry.RESTOptionsGetter) (rest.Storage, error)
 
 var (

@@ -19,14 +19,14 @@ package builder_test
 import (
 	"fmt"
 
-"github.com/vine-io/kes/apiserver-runtime/internal/example/handler"
-"github.com/vine-io/kes/apiserver-runtime/internal/example/strategy"
-"github.com/vine-io/kes/apiserver-runtime/internal/example/v1alpha1"
-"github.com/vine-io/kes/apiserver-runtime/internal/example/v1beta1"
-"github.com/vine-io/kes/apiserver-runtime/internal/sample-apiserver/pkg/generated/openapi"
-"github.com/vine-io/kes/apiserver-runtime/pkg/builder"
-"github.com/vine-io/kes/apiserver-runtime/pkg/builder/resource"
-"github.com/vine-io/kes/apiserver-runtime/pkg/builder/rest"
+	"github.com/vine-io/kes/apiserver-runtime/internal/example/handler"
+	"github.com/vine-io/kes/apiserver-runtime/internal/example/strategy"
+	"github.com/vine-io/kes/apiserver-runtime/internal/example/v1alpha1"
+	"github.com/vine-io/kes/apiserver-runtime/internal/example/v1beta1"
+	"github.com/vine-io/kes/apiserver-runtime/internal/sample-apiserver/pkg/generated/openapi"
+	"github.com/vine-io/kes/apiserver-runtime/pkg/builder"
+	"github.com/vine-io/kes/apiserver-runtime/pkg/builder/resource"
+	"github.com/vine-io/kes/apiserver-runtime/pkg/builder/rest"
 )
 
 // Example registers a resource with the apiserver using etcd for storage.

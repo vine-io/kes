@@ -29,7 +29,7 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
-"github.com/vine-io/kes/apiserver-runtime/internal/sample-apiserver/pkg/apiserver"
+	"github.com/vine-io/kes/apiserver-runtime/internal/sample-apiserver/pkg/apiserver"
 )
 
 // change: apiserver-runtime

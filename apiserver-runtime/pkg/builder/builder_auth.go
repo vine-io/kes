@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/klog/v2"
 
-"github.com/vine-io/kes/apiserver-runtime/internal/sample-apiserver/pkg/cmd/server"
+	"github.com/vine-io/kes/apiserver-runtime/internal/sample-apiserver/pkg/cmd/server"
 )
 
 var enableAuthorization bool

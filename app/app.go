@@ -28,6 +28,7 @@ import (
 	gpath "path"
 	"strings"
 
+	"go.etcd.io/etcd/server/v3/etcdserver/api/v3client"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -127,6 +128,8 @@ func (app *App) Start(stopc <-chan struct{}) error {
 	case <-etcd.Server.ReadyNotify():
 	case <-stopc:
 	}
+
+	v3client.New(etcd.Server)
 
 	select {
 	case <-stopc:
