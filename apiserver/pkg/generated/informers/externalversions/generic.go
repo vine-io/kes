@@ -21,10 +21,9 @@ package externalversions
 import (
 	"fmt"
 
+	v1alpha1 "github.com/vine-io/kes/apiserver/pkg/apis/sample/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
-	v1alpha1 "github.com/vine-io/kes/apiserver/pkg/apis/wardle/v1alpha1"
-	v1beta1 "github.com/vine-io/kes/apiserver/pkg/apis/wardle/v1beta1"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -53,15 +52,13 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=wardle.example.com, Version=v1alpha1
+	// Group=sample.k8s.com, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("fischers"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Wardle().V1alpha1().Fischers().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sample().V1alpha1().Fischers().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("flunders"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Wardle().V1alpha1().Flunders().Informer()}, nil
-
-		// Group=wardle.example.com, Version=v1beta1
-	case v1beta1.SchemeGroupVersion.WithResource("flunders"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Wardle().V1beta1().Flunders().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sample().V1alpha1().Flunders().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("fortunes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Sample().V1alpha1().Fortunes().Informer()}, nil
 
 	}
 

@@ -19,16 +19,14 @@ limitations under the License.
 package fake
 
 import (
+	clientset "github.com/vine-io/kes/apiserver/pkg/generated/clientset/versioned"
+	samplev1alpha1 "github.com/vine-io/kes/apiserver/pkg/generated/clientset/versioned/typed/sample/v1alpha1"
+	fakesamplev1alpha1 "github.com/vine-io/kes/apiserver/pkg/generated/clientset/versioned/typed/sample/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/testing"
-	clientset "github.com/vine-io/kes/apiserver/pkg/generated/clientset/versioned"
-	wardlev1alpha1 "github.com/vine-io/kes/apiserver/pkg/generated/clientset/versioned/typed/wardle/v1alpha1"
-	fakewardlev1alpha1 "github.com/vine-io/kes/apiserver/pkg/generated/clientset/versioned/typed/wardle/v1alpha1/fake"
-	wardlev1beta1 "github.com/vine-io/kes/apiserver/pkg/generated/clientset/versioned/typed/wardle/v1beta1"
-	fakewardlev1beta1 "github.com/vine-io/kes/apiserver/pkg/generated/clientset/versioned/typed/wardle/v1beta1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -81,12 +79,7 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// WardleV1alpha1 retrieves the WardleV1alpha1Client
-func (c *Clientset) WardleV1alpha1() wardlev1alpha1.WardleV1alpha1Interface {
-	return &fakewardlev1alpha1.FakeWardleV1alpha1{Fake: &c.Fake}
-}
-
-// WardleV1beta1 retrieves the WardleV1beta1Client
-func (c *Clientset) WardleV1beta1() wardlev1beta1.WardleV1beta1Interface {
-	return &fakewardlev1beta1.FakeWardleV1beta1{Fake: &c.Fake}
+// SampleV1alpha1 retrieves the SampleV1alpha1Client
+func (c *Clientset) SampleV1alpha1() samplev1alpha1.SampleV1alpha1Interface {
+	return &fakesamplev1alpha1.FakeSampleV1alpha1{Fake: &c.Fake}
 }

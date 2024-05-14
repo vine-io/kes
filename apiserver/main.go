@@ -24,16 +24,28 @@ package main
 import (
 	"os"
 
-	"k8s.io/component-base/cli"
+	genericapiserver "k8s.io/apiserver/pkg/server"
+	"k8s.io/component-base/logs"
+	"k8s.io/klog/v2"
 
-	"github.com/vine-io/kes/apiserver/pkg/cmd/server"
-	generickeserver "github.com/vine-io/kes/pkg/server"
+	"github.com/vine-io/kes/apiserver/pkg/apis/sample/v1alpha1"
+	"github.com/vine-io/kes/apiserver/pkg/generated/openapi"
+	"github.com/vine-io/kes/apiserver/pkg/server"
 )
 
 func main() {
-	stopCh := generickeserver.SetupSignalHandler()
-	options := server.NewWardleServerOptions(os.Stdout, os.Stderr)
-	cmd := server.NewCommandStartWardleServer(options, stopCh)
-	code := cli.Run(cmd)
-	os.Exit(code)
+	logs.InitLogs()
+	defer logs.FlushLogs()
+
+	o := server.NewWardleServerOptions(os.Stdout, os.Stderr)
+	err := o.WithOpenAPIDefinitions("sample", "v1.0.0", openapi.GetOpenAPIDefinitions).
+		WithResource(&v1alpha1.Flunder{}). // namespaced resource
+		WithResource(&v1alpha1.Fischer{}). // non-namespaced resource
+		// WithRes(&v1alpha1.Fortune{}). // resource with custom rest.Storage implementation
+		//WithLocalDebugExtension().
+		Execute(genericapiserver.SetupSignalHandler())
+
+	if err != nil {
+		klog.Fatal(err)
+	}
 }
