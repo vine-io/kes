@@ -23,8 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
-
-	contextutil "github.com/vine-io/kes/apiserver/pkg/util/context"
 )
 
 type StorageProvider func(s *runtime.Scheme, g generic.RESTOptionsGetter) (rest.Storage, error)
@@ -84,7 +82,7 @@ func (p parentPlumbedStorageGetterProvider) New() runtime.Object {
 func (p parentPlumbedStorageGetterProvider) Destroy() {}
 
 func (p parentPlumbedStorageGetterProvider) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
-	return p.delegate.Get(contextutil.WithParentStorage(ctx, p.parentStorage), name, options)
+	return p.delegate.Get(WithParentStorage(ctx, p.parentStorage), name, options)
 }
 
 var _ rest.Getter = &parentPlumbedStorageGetterUpdaterProvider{}
@@ -103,7 +101,7 @@ func (p parentPlumbedStorageGetterUpdaterProvider) New() runtime.Object {
 func (p parentPlumbedStorageGetterUpdaterProvider) Destroy() {}
 
 func (p parentPlumbedStorageGetterUpdaterProvider) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
-	return p.getter.Get(contextutil.WithParentStorage(ctx, p.parentStorage), name, options)
+	return p.getter.Get(WithParentStorage(ctx, p.parentStorage), name, options)
 }
 
 func (p parentPlumbedStorageGetterUpdaterProvider) Update(
@@ -115,7 +113,7 @@ func (p parentPlumbedStorageGetterUpdaterProvider) Update(
 	forceAllowCreate bool,
 	options *metav1.UpdateOptions) (runtime.Object, bool, error) {
 	return p.updater.Update(
-		contextutil.WithParentStorage(ctx, p.parentStorage),
+		WithParentStorage(ctx, p.parentStorage),
 		name,
 		objInfo,
 		createValidation,

@@ -21,7 +21,6 @@ import (
 	"github.com/vine-io/kes/apiserver/pkg/server/resource"
 	"github.com/vine-io/kes/apiserver/pkg/server/resource/util"
 	"github.com/vine-io/kes/apiserver/pkg/server/rest"
-	contextutil "github.com/vine-io/kes/apiserver/pkg/util/context"
 )
 
 // singletonProvider ensures different versions of the same resource share storage
@@ -204,7 +203,7 @@ func (c *commonSubResourceStorage) Destroy() {
 
 func (c *commonSubResourceStorage) Get(ctx context.Context, name string, options *v1.GetOptions) (runtime.Object, error) {
 	return c.subResourceGetter.Get(
-		contextutil.WithParentStorage(ctx, c.parentStorage),
+		rest.WithParentStorage(ctx, c.parentStorage),
 		name,
 		options)
 }
@@ -217,7 +216,7 @@ func (c *commonSubResourceStorage) Update(ctx context.Context,
 	forceAllowCreate bool,
 	options *v1.UpdateOptions) (runtime.Object, bool, error) {
 	return c.subResourceUpdater.Update(
-		contextutil.WithParentStorage(ctx, c.parentStorage),
+		rest.WithParentStorage(ctx, c.parentStorage),
 		name,
 		objInfo,
 		createValidation,
@@ -247,7 +246,7 @@ func (c *connectorSubResourceStorage) Destroy() {
 
 func (c *connectorSubResourceStorage) Connect(ctx context.Context, id string, options runtime.Object, r registryrest.Responder) (http.Handler, error) {
 	return c.subResourceConnector.Connect(
-		contextutil.WithParentStorage(ctx, c.parentStorage),
+		rest.WithParentStorage(ctx, c.parentStorage),
 		id,
 		options,
 		r)
@@ -284,7 +283,7 @@ func (s *scaleSubResourceStorage) Destroy() {}
 
 func (s *scaleSubResourceStorage) Get(ctx context.Context, name string, options *v1.GetOptions) (runtime.Object, error) {
 	parentObj, err := s.parentStorageGetter.Get(
-		contextutil.WithParentStorage(ctx, s.parentStorage),
+		rest.WithParentStorage(ctx, s.parentStorage),
 		name,
 		options)
 	if err != nil {
@@ -305,7 +304,7 @@ func (s *scaleSubResourceStorage) Update(ctx context.Context,
 	forceAllowCreate bool,
 	options *v1.UpdateOptions) (runtime.Object, bool, error) {
 	updatedObj, updated, err := s.parentStorageUpdater.Update(
-		contextutil.WithParentStorage(ctx, s.parentStorage),
+		rest.WithParentStorage(ctx, s.parentStorage),
 		name,
 		&scaleUpdatedObjectInfo{reqObjInfo: objInfo},
 		toScaleCreateValidation(createValidation),

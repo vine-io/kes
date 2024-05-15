@@ -14,7 +14,6 @@ import (
 	"github.com/vine-io/kes/apiserver/pkg/server/resource"
 	"github.com/vine-io/kes/apiserver/pkg/server/resource/resourcerest"
 	"github.com/vine-io/kes/apiserver/pkg/server/rest"
-	"github.com/vine-io/kes/apiserver/pkg/util/loopback"
 )
 
 var enableAuthorization bool
@@ -139,31 +138,6 @@ func (o *WardleServerOptions) WithAdditionalSchemeInstallers(fns ...func(*runtim
 func (o *WardleServerOptions) WithAdditionalSchemesToBuild(s ...*runtime.Scheme) *WardleServerOptions {
 	o.schemes = append(o.schemes, s...)
 	return o
-}
-
-// ExposeLoopbackClientConfig exposes loopback client config as an external singleton.
-func (o *WardleServerOptions) ExposeLoopbackClientConfig() *WardleServerOptions {
-	return o.WithServerFns(func(c *genericapiserver.GenericAPIServer) *genericapiserver.GenericAPIServer {
-		loopback.SetLoopbackClientConfig(c.LoopbackClientConfig)
-		return c
-	})
-}
-
-// ExposeLoopbackAuthorizer exposes loopback authorizer as an external singleton.
-func (o *WardleServerOptions) ExposeLoopbackAuthorizer() *WardleServerOptions {
-	return o.WithServerFns(func(s *genericapiserver.GenericAPIServer) *genericapiserver.GenericAPIServer {
-		loopback.SetAuthorizer(s.Authorizer)
-		return s
-	})
-}
-
-// ExposeLoopbackMasterClientConfig exposes loopback client config for accessing the
-// configured master cluster's kube-apiserver as an external singleton.
-func (o *WardleServerOptions) ExposeLoopbackMasterClientConfig() *WardleServerOptions {
-	return o.WithConfigFns(func(config *genericapiserver.RecommendedConfig) *genericapiserver.RecommendedConfig {
-		loopback.SetLoopbackMasterClientConfig(config.ClientConfig)
-		return config
-	})
 }
 
 // WithoutEtcd removes etcd related settings from apiserver.
