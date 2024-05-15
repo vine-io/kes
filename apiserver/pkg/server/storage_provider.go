@@ -12,14 +12,12 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	registryrest "k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/klog/v2"
 
 	"github.com/vine-io/kes/apiserver/pkg/server/resource"
-	"github.com/vine-io/kes/apiserver/pkg/server/resource/util"
 	"github.com/vine-io/kes/apiserver/pkg/server/rest"
 )
 
@@ -126,11 +124,12 @@ func createStatusSubResourceStorage(parentStorage registryrest.StandardStorage) 
 	if !ok {
 		return nil, fmt.Errorf("parent type implementing ObjectWithStatusSubResource must be a cananical resource")
 	}
-	statusStore := *parentStore
-	statusStore.UpdateStrategy = &statusSubResourceStrategy{RESTUpdateStrategy: parentStore.UpdateStrategy}
-	return &statusSubResourceStorage{
-		store: &statusStore,
-	}, nil
+	return parentStore, nil
+	//statusStore := *parentStore
+	//statusStore.UpdateStrategy = &statusSubResourceStrategy{RESTUpdateStrategy: parentStore.UpdateStrategy}
+	//return &statusSubResourceStorage{
+	//	store: &statusStore,
+	//}, nil
 }
 
 // status subresource storage
@@ -177,9 +176,9 @@ func (s *statusSubResourceStrategy) PrepareForUpdate(ctx context.Context, obj, o
 	statusOld := old.(resource.ObjectWithStatusSubResource)
 	// only modifies status
 	statusObj.GetStatus().CopyTo(statusOld)
-	if err := util.DeepCopy(statusOld, statusObj); err != nil {
-		utilruntime.HandleError(err)
-	}
+	//if err := util.DeepCopy(statusOld, statusObj); err != nil {
+	//	utilruntime.HandleError(err)
+	//}
 }
 
 // common subresource storage

@@ -1,333 +1,167 @@
+/*
+Copyright 2016 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package server
 
 import (
-	"strings"
+	"fmt"
+	"io"
+	"net"
 
-	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/spf13/cobra"
+	"github.com/vine-io/kes/apiserver/pkg/apis/sample/v1alpha1"
+	generatedOpenapi "github.com/vine-io/kes/apiserver/pkg/generated/openapi"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	regsitryrest "k8s.io/apiserver/pkg/registry/rest"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/klog/v2"
-	openapicommon "k8s.io/kube-openapi/pkg/common"
-
-	"github.com/vine-io/kes/apiserver/pkg/server/resource"
-	"github.com/vine-io/kes/apiserver/pkg/server/resource/resourcerest"
-	"github.com/vine-io/kes/apiserver/pkg/server/rest"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
-var enableAuthorization bool
+// change: apiserver-runtime
+//const defaultEtcdPathPrefix = "/registry/wardle.example.com"
 
-// DisableAuthorization disables delegated authentication and authorization
-//func (o *WardleServerOptions) DisableAuthorization() *WardleServerOptions {
-//	ServerOptionsFns = append(ServerOptionsFns, func(o *ServerOptions) *ServerOptions {
-//		if !enableAuthorization {
-//			o.RecommendedOptions.Authorization = nil
-//		}
-//		return o
-//	})
-//	FlagsFns = append(FlagsFns, func(fs *pflag.FlagSet) *pflag.FlagSet {
-//		fs.BoolVar(&enableAuthorization, "enable-authorization", false,
-//			"Enabling authorization will check if the incoming authenticated requests "+
-//				"have sufficient permission for the requesting target. Deploying the apiserver "+
-//				"inside a kubernetes cluster will delegate the authorization to the hosting "+
-//				"kube-apiserver, otherwise specify `--authorization-kubeconfig` to explicitly "+
-//				"set a kube-apiserver to talk to.")
-//		return fs
-//	})
-//	return o
-//}
+// WardleServerOptions contains state for master/api server
+type WardleServerOptions struct {
+	RecommendedOptions *RecommendedOptions
 
-var enablesLocalStandaloneDebugging bool
+	StdOut io.Writer
+	StdErr io.Writer
+}
 
-// WithLocalDebugExtension adds an optional local-debug mode to the apiserver so that it can be tested
-// locally without involving a complete kubernetes cluster. A flag named "--standalone-debug-mode" will
-// also be added the binary which forcily requires "--bind-address" to be "127.0.0.1" in order to avoid
-// security issues.
-//func (o *WardleServerOptions) WithLocalDebugExtension() *WardleServerOptions {
-//	ServerOptionsFns = append(ServerOptionsFns, func(options *ServerOptions) *ServerOptions {
-//		secureBindingAddr := options.RecommendedOptions.SecureServing.BindAddress.String()
-//		if enablesLocalStandaloneDebugging {
-//			if secureBindingAddr != "127.0.0.1" {
-//				klog.Fatal(`--bind-address must be "127.0.0.1" if --standalone-debug-mode is set`)
-//			}
-//			options.RecommendedOptions.Authorization = nil
-//			options.RecommendedOptions.CoreAPI = nil
-//			options.RecommendedOptions.Admission = nil
-//		}
-//		return options
-//	})
-//	FlagsFns = append(FlagsFns, func(fs *pflag.FlagSet) *pflag.FlagSet {
-//		fs.BoolVar(&enablesLocalStandaloneDebugging, "standalone-debug-mode", false,
-//			"Under the local-debug mode the apiserver will allow all access to its resources without "+
-//				"authorizing the requests, this flag is only intended for debugging in your workstation "+
-//				"and the apiserver will be crashing if its binding address is not 127.0.0.1.")
-//		return fs
-//	})
-//	ServerOptionsFns = append(ServerOptionsFns, func(o *ServerOptions) *ServerOptions {
-//		o.RecommendedOptions.Authentication.RemoteKubeConfigFileOptional = true
-//		return o
-//	})
-//	return o
-//}
+// NewWardleServerOptions returns a new WardleServerOptions
+func NewWardleServerOptions(out, errOut io.Writer) *WardleServerOptions {
+	// change: apiserver-runtime
 
-// WithOptionsFns sets functions to customize the ServerOptions used to create the apiserver
-func (o *WardleServerOptions) WithOptionsFns(fns ...func(*ServerOptions) *ServerOptions) *WardleServerOptions {
-	ServerOptionsFns = append(ServerOptionsFns, fns...)
+	o := &WardleServerOptions{
+
+		StdOut: out,
+		StdErr: errOut,
+	}
+
+	versions := []schema.GroupVersion{v1alpha1.SchemeGroupVersion}
+	o.RecommendedOptions = NewRecommendedOptions(
+		getEctdPath(),
+		Codecs.LegacyCodec(versions...),
+	)
+
+	o.RecommendedOptions.Etcd.StorageConfig.EncodeVersioner = schema.GroupVersions(versions)
+	//o.RecommendedOptions.Etcd.StorageConfig.Transport.ServerList = []string{"http://127.0.0.1:2379"}
+
+	//o.RecommendedOptions.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(v1alpha1.SchemeGroupVersion, schema.GroupKind{Group: v1alpha1.GroupName})
+	o.RecommendedOptions.Admission = nil
+	o.RecommendedOptions.CoreAPI = nil
+	//o.RecommendedOptions.Authentication = nil
+	//o.RecommendedOptions.Authorization.RemoteKubeConfigFileOptional = true
+
 	return o
 }
 
-// WithServerFns sets functions to customize the GenericAPIServer
-func (o *WardleServerOptions) WithServerFns(fns ...func(server *genericapiserver.GenericAPIServer) *genericapiserver.GenericAPIServer) *WardleServerOptions {
-	GenericAPIServerFns = append(GenericAPIServerFns, fns...)
-	return o
+// Validate validates WardleServerOptions
+func (o WardleServerOptions) Validate(args []string) error {
+	errors := make([]error, 0)
+	errors = append(errors, o.RecommendedOptions.Validate()...)
+	return utilerrors.NewAggregate(errors)
 }
 
-// WithConfigFns sets functions to customize the RecommendedConfig
-func (o *WardleServerOptions) WithConfigFns(fns ...func(config *genericapiserver.RecommendedConfig) *genericapiserver.RecommendedConfig) *WardleServerOptions {
-	RecommendedConfigFns = append(RecommendedConfigFns, fns...)
-	return o
+// Complete fills in fields required to have valid data
+func (o *WardleServerOptions) Complete() error {
+
+	return nil
 }
 
-// WithFlagFns sets functions to customize the flags for the compiled binary.
-func (o *WardleServerOptions) WithFlagFns(fns ...func(set *pflag.FlagSet) *pflag.FlagSet) *WardleServerOptions {
-	FlagsFns = append(FlagsFns, fns...)
-	return o
+// Config returns config for the api server given WardleServerOptions
+func (o *WardleServerOptions) Config() (*Config, error) {
+	// TODO have a "real" external address
+	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
+		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
+	}
+
+	// change: allow etcd options to be nil
+	// TODO: this should be reverted after rebasing sample-apiserver onto https://github.com/kubernetes/kubernetes/pull/101106
+	if o.RecommendedOptions.Etcd != nil {
+		//o.RecommendedOptions.Etcd.StorageConfig.Paging = utilfeature.DefaultFeatureGate.Enabled(features.APIListChunking)
+	}
+
+	serverConfig := genericapiserver.NewRecommendedConfig(Codecs)
+
+	//o.RecommendedOptions.CoreAPI = nil
+	//o.RecommendedOptions.Admission = nil
+	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+		return nil, err
+	}
+
+	name, version, defs := "sample", "v1.0.0", generatedOpenapi.GetOpenAPIDefinitions
+	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(defs, openapi.NewDefinitionNamer(Scheme))
+	serverConfig.OpenAPIV3Config.Info.Title = name
+	serverConfig.OpenAPIV3Config.Info.Version = version
+
+	//serverConfig = ApplyRecommendedConfigFns(serverConfig)
+
+	config := &Config{
+		GenericConfig: serverConfig,
+		ExtraConfig:   ExtraConfig{},
+	}
+	return config, nil
 }
 
-// WithOpenAPIDefinitions registers resource OpenAPI definitions generated by openapi-gen.
-//
-//	export K8sAPIS=k8s.io/apimachinery/pkg/api/resource,\
-//	  k8s.io/apimachinery/pkg/apis/meta/v1,\
-//	  k8s.io/apimachinery/pkg/runtime,\
-//	  k8s.io/apimachinery/pkg/version
-//	export MY_APIS=my-go-pkg/pkg/apis/my-group/my-version
-//	export OPENAPI=my-go-pkg/pkg/generated/openapi
-//	openapi-gen --input-dirs $K8SAPIS,$MY_APIS --output-package $OPENAPI \
-//	  -O zz_generated.openapi --output-base ../../.. --go-header-file ./hack/boilerplate.go.txt
-func (o *WardleServerOptions) WithOpenAPIDefinitions(
-	name, version string, openAPI openapicommon.GetOpenAPIDefinitions) *WardleServerOptions {
-	SetOpenAPIDefinitions(name, version, openAPI)
-	return o
-}
+// RunWardleServer starts a new WardleServer given WardleServerOptions
+func (o WardleServerOptions) RunWardleServer(stopCh <-chan struct{}) error {
+	config, err := o.Config()
+	if err != nil {
+		return err
+	}
 
-// WithPostStartHook registers a post start hook which will be invoked after the apiserver is started
-// and before it's ready for serving requests.
-func (o *WardleServerOptions) WithPostStartHook(name string, hookFunc genericapiserver.PostStartHookFunc) *WardleServerOptions {
-	o.WithServerFns(func(server *genericapiserver.GenericAPIServer) *genericapiserver.GenericAPIServer {
-		if err := server.AddPostStartHook(name, hookFunc); err != nil {
-			klog.Fatal("failed registering post-start hook %v: %v", name, err)
+	wardleServer, err := config.Complete().New()
+	if err != nil {
+		return err
+	}
+
+	wardleServer.GenericAPIServer.AddPostStartHookOrDie("start-sample-server-informers", func(context genericapiserver.PostStartHookContext) error {
+		if config.GenericConfig.SharedInformerFactory != nil {
+			config.GenericConfig.SharedInformerFactory.Start(context.StopCh)
 		}
-		return server
+		return nil
 	})
-	return o
+
+	return wardleServer.GenericAPIServer.PrepareRun().Run(stopCh)
 }
 
-// WithAdditionalSchemeInstallers registers functions to install additional functions or resources into the Scheme.
-// This can be used to manually registering defaulting functions, conversion functions, or resource types, rather
-// than registering them automatically by implementing the corresponding interfaces on the resources.
-func (o *WardleServerOptions) WithAdditionalSchemeInstallers(fns ...func(*runtime.Scheme) error) *WardleServerOptions {
-	o.schemeBuilder.Register(fns...)
-	return o
-}
-
-// WithAdditionalSchemesToBuild will add types and functions to these Schemes in addition to the
-// apiserver.Scheme.
-// This can be used to register the resource types, defaulting functions, and conversion functions
-// with additional Scheme's.
-func (o *WardleServerOptions) WithAdditionalSchemesToBuild(s ...*runtime.Scheme) *WardleServerOptions {
-	o.schemes = append(o.schemes, s...)
-	return o
-}
-
-// WithoutEtcd removes etcd related settings from apiserver.
-func (o *WardleServerOptions) WithoutEtcd() *WardleServerOptions {
-	return o.WithOptionsFns(func(o *ServerOptions) *ServerOptions {
-		o.RecommendedOptions.Etcd = nil
-		return o
-	})
-}
-
-// WithResource registers the resource with the apiserver.
-//
-// If no versions of this GroupResource have already been registered, a new default handler will be registered.
-// If the object implements rest.Getter, rest.Updater or rest.Creator then the provided object itself will be
-// used as the rest handler for the resource type.
-//
-// If no versions of this GroupResource have already been registered and the object does NOT implement the rest
-// interfaces, then a new etcd backed storage will be created for the object and used as the handler.
-// The storage will use a DefaultStrategy, which delegates functions to the object if the object implements
-// interfaces defined in the "apiserver-runtime/pkg/builder/rest" package.  Otherwise it will provide a default
-// behavior.
-//
-// WithResource will automatically register the "status" subresource if the object implements the
-// resource.StatusGetSetter interface.
-//
-// WithResource will automatically register version-specific defaulting for this GroupVersionResource
-// if the object implements the resource.Defaulter interface.
-//
-// WithResource automatically adds the object and its list type to the known types.  If the object also declares itself
-// as the storage version, the object and its list type will be added as storage versions to the SchemeBuilder as well.
-// The storage version is the version accepted by the handler.
-//
-// If another version of the object's GroupResource has already been registered, then the resource will use the
-// handler already registered for that version of the GroupResource.  Objects for this version will be converted
-// to the object version which the handler accepts before the handler is invoked.
-func (o *WardleServerOptions) WithResource(obj resource.Object) *WardleServerOptions {
-	gvr := obj.GetGroupVersionResource()
-	o.schemeBuilder.Register(resource.AddToScheme(obj))
-
-	// reuse the storage if this resource has already been registered
-	if s, found := o.storageProvider[gvr.GroupResource()]; found {
-		_ = o.forGroupVersionResource(gvr, s.Get)
-		return o
+// NewCommandStartWardleServer provides a CLI handler for 'start master' command
+func NewCommandStartWardleServer(o *WardleServerOptions, stopCh <-chan struct{}) *cobra.Command {
+	cmd := &cobra.Command{
+		Short: "Launch a wardle API server",
+		Long:  "Launch a wardle API server",
+		RunE: func(c *cobra.Command, args []string) error {
+			if err := o.Complete(); err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			if err := o.RunWardleServer(stopCh); err != nil {
+				return err
+			}
+			return nil
+		},
 	}
 
-	var parentStorageProvider rest.StorageProvider
+	flags := cmd.Flags()
+	o.RecommendedOptions.AddFlags(flags)
+	utilfeature.DefaultMutableFeatureGate.AddFlag(flags)
 
-	defer func() {
-		// automatically create status subresource if the object implements the status interface
-		o.withSubResourceIfExists(obj, parentStorageProvider)
-	}()
-
-	// If the type implements it's own storage, then use that
-	switch s := obj.(type) {
-	case resourcerest.Creator, resourcerest.Updater, resourcerest.Getter, resourcerest.Lister:
-		parentStorageProvider = rest.StaticHandlerProvider{Storage: s.(regsitryrest.Storage)}.Get
-	default:
-		parentStorageProvider = rest.New(obj)
-	}
-
-	_ = o.forGroupVersionResource(gvr, parentStorageProvider)
-
-	return o
-}
-
-// WithResourceAndStrategy registers the resource with the apiserver creating a new etcd backed storage
-// for the GroupResource using the provided strategy.  In most cases callers should instead use WithResource
-// and implement the interfaces defined in "apiserver-runtime/pkg/builder/rest" to control the Strategy.
-//
-// Note: WithResourceAndHandler should never be called after the GroupResource has already been registered with
-// another version.
-func (o *WardleServerOptions) WithResourceAndStrategy(obj resource.Object, strategy rest.Strategy) *WardleServerOptions {
-	gvr := obj.GetGroupVersionResource()
-	o.schemeBuilder.Register(resource.AddToScheme(obj))
-
-	parentStorageProvider := rest.NewWithStrategy(obj, strategy)
-	_ = o.forGroupVersionResource(gvr, parentStorageProvider)
-
-	// automatically create status subresource if the object implements the status interface
-
-	defer func() {
-		// automatically create status subresource if the object implements the status interface
-		o.withSubResourceIfExists(obj, parentStorageProvider)
-	}()
-	return o
-}
-
-// WithResourceAndHandler registers a request handler for the resource rather than the default
-// etcd backed storage.
-//
-// Note: WithResourceAndHandler should never be called after the GroupResource has already been registered with
-// another version.
-//
-// Note: WithResourceAndHandler will NOT register the "status" subresource for the resource object.
-func (o *WardleServerOptions) WithResourceAndHandler(obj resource.Object, sp rest.StorageProvider) *WardleServerOptions {
-	gvr := obj.GetGroupVersionResource()
-	o.schemeBuilder.Register(resource.AddToScheme(obj))
-	defer func() {
-		// automatically create status subresource if the object implements the status interface
-		o.withSubResourceIfExists(obj, sp)
-	}()
-	return o.forGroupVersionResource(gvr, sp)
-}
-
-// WithResourceAndStorage registers the resource with the apiserver, applying fn to the storage for the resource
-// before completing it.
-//
-// May be used to change low-level storage configuration or swap out the storage backend to something other than
-// etcd.
-//
-// Note: WithResourceAndHandler should never be called after the GroupResource has already been registered with
-// another version.
-func (o *WardleServerOptions) WithResourceAndStorage(obj resource.Object, fn rest.StoreFn) *WardleServerOptions {
-	gvr := obj.GetGroupVersionResource()
-	o.schemeBuilder.Register(resource.AddToScheme(obj))
-	sp := rest.NewWithFn(obj, fn)
-	defer func() {
-		// automatically create status subresource if the object implements the status interface
-		o.withSubResourceIfExists(obj, sp)
-	}()
-	return o.forGroupVersionResource(gvr, sp)
-}
-
-// forGroupVersionResource manually registers storage for a specific resource.
-func (o *WardleServerOptions) forGroupVersionResource(
-	gvr schema.GroupVersionResource, sp rest.StorageProvider) *WardleServerOptions {
-	// register the group version
-	o.withGroupVersions(gvr.GroupVersion())
-
-	// TODO: make sure folks don't register multiple storageProvider instance for the same group-resource
-	// don't replace the existing instance otherwise it will chain wrapped singletonProviders when
-	// fetching from the map before calling this function
-	if _, found := o.storageProvider[gvr.GroupResource()]; !found {
-		o.storageProvider[gvr.GroupResource()] = &singletonProvider{Provider: sp}
-	}
-	// add the API with its storageProvider
-	APIs[gvr] = sp
-	return o
-}
-
-// forGroupVersionSubResource manually registers storageProvider for a specific subresource.
-func (o *WardleServerOptions) forGroupVersionSubResource(
-	gvr schema.GroupVersionResource, parentProvider rest.StorageProvider, subResourceProvider rest.StorageProvider) {
-	isSubResource := strings.Contains(gvr.Resource, "/")
-	if !isSubResource {
-		klog.Fatalf("Expected status subresource but received %v/%v/%v", gvr.Group, gvr.Version, gvr.Resource)
-	}
-
-	// add the API with its storageProvider for subresource
-	APIs[gvr] = (&subResourceStorageProvider{
-		subResourceGVR:             gvr,
-		parentStorageProvider:      parentProvider,
-		subResourceStorageProvider: subResourceProvider,
-	}).Get
-}
-
-// WithSchemeInstallers registers functions to install resource types into the Scheme.
-func (o *WardleServerOptions) withGroupVersions(versions ...schema.GroupVersion) *WardleServerOptions {
-	if o.groupVersions == nil {
-		o.groupVersions = map[schema.GroupVersion]bool{}
-	}
-	for _, gv := range versions {
-		if _, found := o.groupVersions[gv]; found {
-			continue
-		}
-		o.groupVersions[gv] = true
-		o.orderedGroupVersions = append(o.orderedGroupVersions, gv)
-	}
-	return o
-}
-
-func (o *WardleServerOptions) withSubResourceIfExists(obj resource.Object, parentStorageProvider rest.StorageProvider) {
-	parentGVR := obj.GetGroupVersionResource()
-	// automatically create status subresource if the object implements the status interface
-	if _, ok := obj.(resource.ObjectWithStatusSubResource); ok {
-		statusGVR := parentGVR.GroupVersion().WithResource(parentGVR.Resource + "/status")
-		o.forGroupVersionSubResource(statusGVR, parentStorageProvider, nil)
-	}
-	if _, ok := obj.(resource.ObjectWithScaleSubResource); ok {
-		subResourceGVR := parentGVR.GroupVersion().WithResource(parentGVR.Resource + "/scale")
-		o.forGroupVersionSubResource(subResourceGVR, parentStorageProvider, nil)
-	}
-	if sgs, ok := obj.(resource.ObjectWithArbitrarySubResource); ok {
-		for _, sub := range sgs.GetArbitrarySubResources() {
-			sub := sub
-			subResourceGVR := parentGVR.GroupVersion().WithResource(parentGVR.Resource + "/" + sub.SubResourceName())
-			o.forGroupVersionSubResource(subResourceGVR, parentStorageProvider, rest.ParentStaticHandlerProvider{
-				Storage:        sub,
-				ParentProvider: parentStorageProvider,
-			}.Get)
-		}
-	}
+	return cmd
 }
