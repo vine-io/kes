@@ -109,6 +109,10 @@ func (o *WardleServerOptions) Config() (*Config, error) {
 	serverConfig.OpenAPIV3Config.Info.Title = name
 	serverConfig.OpenAPIV3Config.Info.Version = version
 
+	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(defs, openapi.NewDefinitionNamer(Scheme))
+	serverConfig.OpenAPIConfig.Info.Title = name
+	serverConfig.OpenAPIConfig.Info.Version = version
+
 	//serverConfig = ApplyRecommendedConfigFns(serverConfig)
 
 	config := &Config{
