@@ -124,12 +124,12 @@ func createStatusSubResourceStorage(parentStorage registryrest.StandardStorage) 
 	if !ok {
 		return nil, fmt.Errorf("parent type implementing ObjectWithStatusSubResource must be a cananical resource")
 	}
-	return parentStore, nil
-	//statusStore := *parentStore
-	//statusStore.UpdateStrategy = &statusSubResourceStrategy{RESTUpdateStrategy: parentStore.UpdateStrategy}
-	//return &statusSubResourceStorage{
-	//	store: &statusStore,
-	//}, nil
+	//return parentStore, nil
+	statusStore := *parentStore
+	statusStore.UpdateStrategy = &statusSubResourceStrategy{RESTUpdateStrategy: parentStore.UpdateStrategy}
+	return &statusSubResourceStorage{
+		store: &statusStore,
+	}, nil
 }
 
 // status subresource storage

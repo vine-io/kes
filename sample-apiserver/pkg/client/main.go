@@ -23,14 +23,15 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
+	"github.com/vine-io/kes/sample-apiserver/pkg/apis/wardle/v1alpha1"
+	clientset "github.com/vine-io/kes/sample-apiserver/pkg/generated/clientset/versioned"
+	_ "github.com/vine-io/kes/sample-apiserver/pkg/generated/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
-
-	"github.com/vine-io/kes/apiserver/pkg/apis/sample/v1alpha1"
-	clientset "github.com/vine-io/kes/apiserver/pkg/generated/clientset/versioned"
-	_ "github.com/vine-io/kes/apiserver/pkg/generated/clientset/versioned/scheme"
 )
 
 func main() {
@@ -43,7 +44,7 @@ func main() {
 	//	kclientset, _ := kubernetes.NewForConfig(c)
 	//	_ = aggregatorclientsetscheme.AddToScheme(clientsetscheme.Scheme)
 
-	cfg, err := clientcmd.BuildConfigFromFlags("https://127.0.0.1:9443", "kubeconfig")
+	cfg, err := clientcmd.BuildConfigFromFlags("https://192.168.200.130:9443", "kubeconfig")
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 		return
@@ -58,29 +59,26 @@ func main() {
 		return
 	}
 
-	//if err = v1alpha1.AddToScheme(scheme); err != nil {
-	//	klog.Fatalf("Error building scheme: %s", err.Error())
-	//}
-	//if err = clientgoscheme.AddToScheme(scheme); err != nil {
-	//	klog.Fatalf("Error building scheme: %s", err.Error())
-	//}
-
 	ctx := context.Background()
 	fischers := &v1alpha1.Fischer{
 		TypeMeta: metav1.TypeMeta{
+			Kind:       "Fischer",
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "hello",
 		},
 		DisallowedFlunders: []string{"a", "b", "c"},
 	}
-	fischer, err := client.SampleV1alpha1().Fischers().Create(ctx, fischers, metav1.CreateOptions{})
+	data, _ := json.MarshalIndent(fischers, "", " ")
+	fmt.Println(string(data))
+	fischer, err := client.WardleV1alpha1().Fischers().Create(ctx, fischers, metav1.CreateOptions{})
 	if err != nil {
 		klog.Fatalf("Error creating fischer: %s", err.Error())
 	}
-	fischer, _ = client.SampleV1alpha1().Fischers().Get(ctx, "hello", metav1.GetOptions{})
+	fischer, _ = client.WardleV1alpha1().Fischers().Get(ctx, "hello", metav1.GetOptions{})
 	fischer.DisallowedFlunders = fischers.DisallowedFlunders
-	fischers, err = client.SampleV1alpha1().Fischers().Update(ctx, fischer, metav1.UpdateOptions{})
+	fischers, err = client.WardleV1alpha1().Fischers().Update(ctx, fischer, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Fatalf("Error update fischer: %s", err.Error())
 		return
